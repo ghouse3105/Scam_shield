@@ -1,0 +1,113 @@
+"""Repository document validation helpers."""
+
+from collections.abc import Iterable
+
+from scamshield.repositories.exceptions import RepositoryValidationError
+from scamshield.repositories.database import now_document
+
+
+def require_fields(document: dict, fields: Iterable[str]) -> None:
+    """Ensure all required fields are present and non-empty."""
+    missing = [field for field in fields if document.get(field) in (None, "")]
+    if missing:
+        raise RepositoryValidationError(
+            f"Missing required field(s): {', '.join(missing)}"
+        )
+
+
+def with_timestamps(document: dict, is_update: bool = False) -> dict:
+    """Attach created_at and updated_at fields to a document."""
+    prepared = dict(document)
+    timestamps = now_document()
+    if not is_update:
+        prepared.setdefault("created_at", timestamps["created_at"])
+    prepared["updated_at"] = timestamps["updated_at"]
+    return prepared
+
+
+def validate_report(document: dict) -> dict:
+    """Validate a report document."""
+    prepared = with_timestamps(document)
+    require_fields(
+        prepared,
+        ["report_id", "type", "title", "location", "risk", "status", "created_at"],
+    )
+    return prepared
+
+
+def validate_scan(document: dict) -> dict:
+    """Validate a scan document."""
+    prepared = with_timestamps(document)
+    if "url" in prepared and "classification" in prepared:
+        require_fields(
+            prepared,
+            ["scan_id", "url", "risk_score", "classification", "created_at"],
+        )
+        prepared["risk_score"] = int(prepared["risk_score"])
+        prepared.setdefault("reasons", [])
+        prepared.setdefault("confidence", 0)
+        return prepared
+
+    require_fields(prepared, ["scan_id", "kind", "input", "risk", "score", "created_at"])
+    prepared["score"] = int(prepared["score"])
+    return prepared
+
+
+def validate_user(document: dict) -> dict:
+    """Validate a user document."""
+    prepared = with_timestamps(document)
+    prepared.setdefault("role", "user")
+    prepared.setdefault("is_active", True)
+    require_fields(
+        prepared,
+        ["user_id", "username", "email", "password_hash", "role"],
+    )
+    return prepared
+
+
+def validate_threat_intelligence(document: dict) -> dict:
+    """Validate a threat intelligence document."""
+    prepared = with_timestamps(document)
+    require_fields(
+        prepared,
+        [
+            "threat_id",
+            "domain",
+            "first_seen",
+            "last_seen",
+            "scan_count",
+            "average_risk",
+            "highest_risk",
+            "classification",
+            "confidence",
+            "reputation",
+            "reasons",
+        ],
+    )
+    prepared["scan_count"] = int(prepared["scan_count"])
+    prepared["average_risk"] = float(prepared["average_risk"])
+    prepared["highest_risk"] = int(prepared["highest_risk"])
+    prepared["confidence"] = int(prepared["confidence"])
+    prepared["reasons"] = list(prepared["reasons"])
+    return prepared
+
+
+def validate_notification(document: dict) -> dict:
+    """Validate a notification document placeholder."""
+    prepared = with_timestamps(document)
+    require_fields(prepared, ["notification_id", "message"])
+    return prepared
+
+
+def validate_feedback(document: dict) -> dict:
+    """Validate a feedback document placeholder."""
+    prepared = with_timestamps(document)
+    require_fields(prepared, ["feedback_id", "message"])
+    return prepared
+
+
+def validate_audit_log(document: dict) -> dict:
+    """Validate an audit log document placeholder."""
+    prepared = with_timestamps(document)
+    require_fields(prepared, ["audit_id", "action"])
+    return prepared
