@@ -1,8 +1,6 @@
 # ScamShield
 
-<p align="center">
-  <img alt="ScamShield" src="frontend/src/assets/logo.svg" height="64" style="margin-bottom:12px"/>
-  <br/>
+
   <strong>ScamShield — Explainable AI for Multi‑Modal Scam Detection</strong>
 </p>
 
